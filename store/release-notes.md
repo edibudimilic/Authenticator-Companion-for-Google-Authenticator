@@ -1,18 +1,10 @@
-Authenticator Companion for Google Authenticator™ — initial public open-source release.
+# Authenticator Companion 0.1.7
 
-- MIT-licensed source with manual installation instructions.
-- Encrypted local vault, Google Authenticator sync and user-selected OTP filling.
-- Site favicons, a single account scroll area, live countdowns and red expiry warnings.
-- Unofficial-project disclaimer, privacy policy and source links in the extension.
-- 23 automated tests passing.
+- Product branding uses “Authenticator Companion” on the first line and “for Google Authenticator™” on the second.
+- Homepage, installation and privacy links use https://google-auth-for-chrome.exevio.com/.
+- New Store screenshot (1280×800), small promotional tile (440×280) and marquee (1400×560).
+- No new permissions or changes to credential handling. All 23 automated tests pass.
 
-This project is not affiliated with, endorsed by, sponsored by, or produced by Google LLC. Google Authenticator is a trademark of Google LLC. The Google integration is experimental and unsupported.
+Submitted to Chrome Web Store for review on 17 November 2026, with automatic publication after approval. The listing is not yet confirmed live.
 
-Chrome Web Store submission is pending. The attached WebStore ZIP can also be inspected and loaded unpacked after extraction. For the stable development extension ID, use the repository's extension directory instead. See store/PUBLISHING.md for submission instructions.
-# 0.1.7
-
-- Keep the product name on the first line and compatibility subtitle on the second line.
-- Link the extension homepage, installation guide and privacy policy to the new website.
-- Refresh the Store screenshot and add 440×280 and 1400×560 promotional assets.
-- No new permissions or changes to credential handling.
-
+This is an independent, unofficial project, not affiliated with or endorsed by Google LLC. Google Authenticator is a trademark of Google LLC. The Google integration is experimental and unsupported. No independent security audit has been performed.
