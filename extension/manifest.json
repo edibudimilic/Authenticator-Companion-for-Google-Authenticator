@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Authenticator Companion for Google Authenticator™",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Unofficial open-source companion for Google Authenticator™. Sync accounts and fill 2FA codes. Not affiliated with Google.",
   "minimum_chrome_version": "127",
   "permissions": [
@@ -49,5 +49,5 @@
     "128": "icons/128.png"
   },
   "short_name": "Authenticator Companion",
-  "homepage_url": "https://github.com/edibudimilic/Authenticator-Companion-for-Google-Authenticator"
+  "homepage_url": "https://google-auth-for-chrome.exevio.com/"
 }

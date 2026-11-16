@@ -6,3 +6,5 @@
 .account .code{transition:color .15s,text-shadow .15s}.account .code.expiring{color:#d93025;text-shadow:0 0 8px rgb(217 48 37 / 22%)}.code-timer.expiring{color:#d93025;font-weight:600}
 
 .attribution{font-size:10px;line-height:1.45;margin:12px 0 0;flex-shrink:0}.attribution a{color:var(--accent)}
+
+.brand-name{display:block;white-space:nowrap}.brand>div{min-width:0}body[data-page=popup] .brand-name{font-size:14px}

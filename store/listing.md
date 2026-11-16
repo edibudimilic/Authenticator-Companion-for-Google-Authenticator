@@ -18,7 +18,9 @@ Prefer to inspect and run the code yourself? Download or clone the repository, e
 DISCLAIMER
 This is an unofficial, independently developed extension. It is not affiliated with, endorsed by, sponsored by, or produced by Google LLC. Google Authenticator is a trademark of Google LLC. The integration uses an internal, unsupported Google service and may stop working after Google changes. No independent security audit has been performed.
 
-Privacy policy: https://github.com/edibudimilic/Authenticator-Companion-for-Google-Authenticator/blob/main/PRIVACY.md
+Website and installation: https://google-auth-for-chrome.exevio.com/
+
+Privacy policy: https://google-auth-for-chrome.exevio.com/privacy.html
 
 ## Privacy declarations
 Single purpose: Access and fill the user's time-based Authenticator verification codes.
