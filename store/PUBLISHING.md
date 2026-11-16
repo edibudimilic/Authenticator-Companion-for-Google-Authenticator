@@ -4,7 +4,7 @@ The public GitHub release is available independently of the Chrome Web Store. A 
 
 ## Submission status
 
-Version 0.1.7 was submitted on 17 November 2026, replacing the earlier 0.1.6 review submission. The Developer Dashboard confirmed successful submission for review. Public, free distribution in all available regions and automatic publication after approval remain selected. This is not yet confirmation of a live Store listing.
+Version 1.0.0 was submitted on 17 November 2026, replacing the earlier 0.1.7 review submission. The Developer Dashboard showed package version 1.0.0 and confirmed successful submission for review. Public, free distribution in all available regions and automatic publication after approval remain selected. This is not yet confirmation of a live Store listing.
 
 Chrome Web Store item ID: `bmajakgokepceocggcfemcepnjkknpoi`.
 
