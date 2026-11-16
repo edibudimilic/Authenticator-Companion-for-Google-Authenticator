@@ -2,6 +2,14 @@
 
 The public GitHub release is available independently of the Chrome Web Store. A Store listing is not live until Google approves a submitted item and it is published.
 
+## Submission status
+
+Version 0.1.6 was submitted on 16 November 2026. The Developer Dashboard confirmed **Pending review**. Public, free distribution in all available regions and automatic publication after approval were selected. This is not yet confirmation of a live Store listing.
+
+Chrome Web Store item ID: `bmajakgokepceocggcfemcepnjkknpoi`.
+
+## Reproducing the submission
+
 1. Open the Chrome Web Store Developer Dashboard and sign in with the intended publisher account. Complete developer registration yourself if required.
 2. Download `Authenticator-Companion-WebStore.zip` from this repository's GitHub release, or run `python scripts/package.py` to build it. The ZIP contains `manifest.json` at its root and omits the development-only public manifest key. Runtime source code is unchanged.
 3. Choose **Add new item** and upload the ZIP.
