@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Authenticator Companion for Google Authenticator™",
+  "version": "0.1.6",
+  "description": "Unofficial open-source companion for Google Authenticator™. Sync accounts and fill 2FA codes. Not affiliated with Google.",
+  "minimum_chrome_version": "127",
+  "permissions": [
+    "storage",
+    "cookies",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "clipboardWrite",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "https://accounts.google.com/*",
+    "https://android.clients.google.com/*",
+    "https://passbox-pa.googleapis.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Authenticator Companion for Google Authenticator™",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png"
+    }
+  },
+  "options_page": "options.html",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+  },
+  "incognito": "not_allowed",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlHkhDkaFgoS2JRQvxYxNXQcJHVWTh+zZYYoyDSEZFpSaiNBd36mPcVQPsINrOLUtMaAc3bOUGDPdp3kASLsLHIu8XODmmrtev0rokSfbT4pKFkf+GtOB4tEKJjrbOTsp7iGfb5sxGYVUhLqnxWu7Cn21m4fGrzNKCYY3cynoW/IsQXJRvOODj+9ISPNiGF6TPVEtn7SFl4RvdYMED8Psi8mNTiWllPQ+mnCEE/c4j29xJ81xYU3JBCJhU4P41zCvIntBLjN54vbthR+E2uGZw+CNmi/vnr7Xfzd/BcPpdmZDq4PDiqj1DJIl4Yh17JbYmNDSscxy0p0rUbtXgBhEXwIDAQAB",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "short_name": "Authenticator Companion",
+  "homepage_url": "https://github.com/edibudimilic/Authenticator-Companion-for-Google-Authenticator"
+}
