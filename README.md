@@ -4,6 +4,8 @@
 
 An independent, open-source Chrome extension that reads accounts synced to Google Authenticator and generates and fills time-based verification codes locally.
 
+[Website](https://google-auth-for-chrome.exevio.com) · [Website source](https://github.com/edibudimilic/Authenticator-Companion-Website)
+
 **Disclaimer:** This is an unofficial, independently developed project. It is not affiliated with, endorsed by, sponsored by, or produced by Google LLC. Google Authenticator is a trademark of Google LLC.
 
 ## Install manually from source
