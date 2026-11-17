@@ -13,10 +13,10 @@ export async function encryptVault(value, rawKey, salt) {
   return {version:1,iterations:ITERATIONS,salt:toBase64(salt),iv:toBase64(iv),ciphertext:toBase64(new Uint8Array(ciphertext))};
 }
 export async function decryptVault(envelope, rawKey) {
-  if (envelope?.version !== 1 || envelope.iterations !== ITERATIONS) throw new CompanionError('VAULT', 'Nepodržana verzija šifrirane pohrane.');
+  if (envelope?.version !== 1 || envelope.iterations !== ITERATIONS) throw new CompanionError('VAULT', 'Unsupported encrypted vault version.');
   try {
     const key = await crypto.subtle.importKey('raw',rawKey,'AES-GCM',false,['decrypt']);
     const value = await crypto.subtle.decrypt({name:'AES-GCM',iv:fromBase64(envelope.iv),additionalData:AAD},key,fromBase64(envelope.ciphertext));
     return JSON.parse(new TextDecoder().decode(value));
-  } catch { throw new CompanionError('PASSWORD','Pogrešna lozinka ili oštećena lokalna pohrana.'); }
+  } catch { throw new CompanionError('PASSWORD','Incorrect password or damaged local vault.'); }
 }

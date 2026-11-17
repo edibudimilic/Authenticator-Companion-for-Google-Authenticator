@@ -1,12 +1,9 @@
-# Authenticator Companion 1.0.0
+# Authenticator Companion 1.0.1
 
-First public 1.0 release. This version promotes the tested 0.1.7 package to 1.0.0; runtime code and permissions are unchanged.
+- Remove the email field before Google sign-in. Try to resolve the account from the sign-in token first, with a manual-email fallback only after an unsuccessful identity exchange.
+- Bind fallback retries to the same Google login cookie and expire them after 15 minutes.
+- Translate the popup, settings, website suggestions and error messages to English.
+- Preserve existing vault format, accounts and settings; no new permissions.
+- 27 automated tests pass, covering automatic identity exchange, fallback, stale cookies and network failures. Real Google sign-in for the new no-email attempt has not yet been verified; the existing explicit-email exchange is retained as fallback.
 
-- Product branding uses “Authenticator Companion” on the first line and “for Google Authenticator™” on the second.
-- Homepage, installation and privacy links use https://google-auth-for-chrome.exevio.com/.
-- New Store screenshot (1280×800), small promotional tile (440×280) and marquee (1400×560).
-- No new permissions or changes to credential handling. All 23 automated tests pass.
-
-Published publicly in Chrome Web Store on 17 November 2026, as confirmed by the publisher dashboard. Install: https://chromewebstore.google.com/detail/bmajakgokepceocggcfemcepnjkknpoi
-
-This is an independent, unofficial project, not affiliated with or endorsed by Google LLC. Google Authenticator is a trademark of Google LLC. The Google integration is experimental and unsupported. No independent security audit has been performed.
+Independent and unofficial; not affiliated with or endorsed by Google LLC. Google Authenticator is a trademark of Google LLC. The internal Google integration is unsupported and has not received an independent security audit.

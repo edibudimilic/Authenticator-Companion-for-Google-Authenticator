@@ -19,7 +19,7 @@ const ready = (async () => {
 let queue = Promise.resolve();
 function enqueue(action) { const result = queue.then(() => ready).then(action); queue = result.catch(() => {}); return result; }
 function safeError(error) {
-  return error instanceof CompanionError ? {code:error.code,message:error.message} : {code:'INTERNAL',message:'Radnja nije uspjela. Pokušaj ponovno.'};
+  return error instanceof CompanionError ? {code:error.code,message:error.message} : {code:'INTERNAL',message:'The action failed. Please try again.'};
 }
 async function unlockState(touch = false) {
   const {unlocked} = await chrome.storage.session.get('unlocked');
@@ -32,19 +32,19 @@ async function unlockState(touch = false) {
 }
 async function requireUnlocked(touch = false) {
   const state = await unlockState(touch);
-  if (!state) throw new CompanionError('LOCKED','Otključaj Authenticator lozinkom lokalne pohrane.');
+  if (!state) throw new CompanionError('LOCKED','Unlock Authenticator with your local vault password.');
   return state;
 }
 async function saveVault(state) {
   const {vault} = await chrome.storage.local.get('vault');
-  if (!vault) throw new CompanionError('VAULT','Lokalna pohrana nije postavljena.');
+  if (!vault) throw new CompanionError('VAULT','The local vault has not been set up.');
   const encrypted = await encryptVault(state.data,fromBase64(state.key),fromBase64(vault.salt));
   await chrome.storage.local.set({vault:encrypted,summary:{count:state.data.records.length,lastSync:state.data.lastSync}});
   await chrome.storage.session.set({unlocked:state});
 }
 async function synchronize() {
   const state = await requireUnlocked();
-  if (!state.data.session) throw new CompanionError('NOT_CONNECTED','Prvo poveži Google račun.');
+  if (!state.data.session) throw new CompanionError('NOT_CONNECTED','Connect a Google account first.');
   try {
     const records = await fetchRecords(state.data.session);
     state.data.records = records; state.data.lastSync = Date.now();
@@ -83,10 +83,11 @@ async function finishLoginScreen(tabId,completedUrl) {
     if(current.url===completedUrl)await chrome.tabs.remove(tabId);
   } catch {}
 }
-async function tryFinishGoogleLogin(force = false) {
+async function tryFinishGoogleLogin(force = false, fallbackEmail = '') {
   const {pendingGoogle} = await chrome.storage.session.get('pendingGoogle');
   if (!pendingGoogle || pendingGoogle.exchanging) return;
   if (Date.now()-pendingGoogle.started > 15*60*1000) {await chrome.storage.session.remove('pendingGoogle');return;}
+  if (pendingGoogle.emailRequired && !fallbackEmail) return;
   let tab;
   try {tab = await chrome.tabs.get(pendingGoogle.tabId);} catch {await chrome.storage.session.remove('pendingGoogle');return;}
   const url = tab.url ? new URL(tab.url) : null;
@@ -94,10 +95,30 @@ async function tryFinishGoogleLogin(force = false) {
   if (!force && url.hash !== '#close' && url.pathname !== '/o/android/auth') return;
   const cookie = await chrome.cookies.get({url:'https://accounts.google.com/',name:'oauth_token'});
   if (!cookie || await tokenHash(cookie.value) === pendingGoogle.oldHash) return;
+  if (fallbackEmail && (!pendingGoogle.emailRequired || await tokenHash(cookie.value) !== pendingGoogle.fallbackHash)) {
+    await chrome.storage.session.remove('pendingGoogle');
+    throw new CompanionError('AUTH','The Google sign-in session changed. Please sign in again.');
+  }
   const state = await requireUnlocked();
   pendingGoogle.exchanging = true; await chrome.storage.session.set({pendingGoogle});
   try {
-    const session = await exchangeLogin(cookie.value,pendingGoogle.email);
+    const email = fallbackEmail || pendingGoogle.email || '';
+    let session;
+    try {session = await exchangeLogin(cookie.value,email);}
+    catch (error) {
+      if (!email && error instanceof CompanionError && ['AUTH','BadAuthentication','NeedsBrowser'].includes(error.code)) {
+        // Keep only a hash of the cookie. The actual token stays in Google's
+        // cookie store and is rechecked before any manual-email retry.
+        pendingGoogle.emailRequired = true;
+        pendingGoogle.fallbackHash = await tokenHash(cookie.value);
+        pendingGoogle.exchanging = false;
+        await chrome.storage.session.set({pendingGoogle});
+        await chrome.storage.local.remove('lastError');
+        await chrome.runtime.openOptionsPage();
+        return;
+      }
+      throw error;
+    }
     // Retain a successful login even if the following read fails.
     state.data.session = session; await saveVault(state);
     await chrome.storage.session.remove('pendingGoogle');
@@ -117,18 +138,18 @@ async function status() {
   const permissions = await chrome.permissions.getAll();
   return {configured:Boolean(local.vault),locked:!state,connected:Boolean(state?.data.session),email:state?.data.session?.email || '',
     count:state?.data.records.length ?? local.summary?.count ?? 0,lastSync:state?.data.lastSync ?? local.summary?.lastSync ?? null,
-    lastError:local.lastError || null,pendingGoogle:Boolean(pendingGoogle),automatic:permissions.origins?.includes('https://*/*') || false,
+    lastError:local.lastError || null,pendingGoogle:Boolean(pendingGoogle),emailRequired:Boolean(pendingGoogle?.emailRequired),automatic:permissions.origins?.includes('https://*/*') || false,
     accounts:state ? state.data.records.map(metadata).sort((a,b)=>(a.issuer+a.account).localeCompare(b.issuer+b.account)) : [],bindings:local.bindings || {},siteFavicons:local.siteFavicons || {}};
 }
 function trustedUI(sender) {
   return sender.id === chrome.runtime.id && ['popup.html','options.html'].some(file => sender.url === chrome.runtime.getURL(file));
 }
 async function senderSite(sender) {
-  if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0 || !sender.url) throw new CompanionError('ORIGIN','Nedopušten zahtjev stranice.');
+  if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0 || !sender.url) throw new CompanionError('ORIGIN','This page request is not allowed.');
   const tab = await chrome.tabs.get(sender.tab.id), origin = siteOrigin(sender.url);
-  if (!origin || origin !== siteOrigin(tab.url)) throw new CompanionError('ORIGIN','Stranica se promijenila. Pokušaj ponovno.');
+  if (!origin || origin !== siteOrigin(tab.url)) throw new CompanionError('ORIGIN','The page changed. Please try again.');
   const url=new URL(origin),pattern=`${url.protocol}//${url.hostname}/*`;
-  if(!await chrome.permissions.contains({origins:[pattern]}))throw new CompanionError('PERMISSION','Pristup ovoj stranici više nije dopušten.');
+  if(!await chrome.permissions.contains({origins:[pattern]}))throw new CompanionError('PERMISSION','Access to this site is no longer granted.');
   return {origin,tab};
 }
 async function handleSite(message,sender) {
@@ -138,18 +159,18 @@ async function handleSite(message,sender) {
   if (message.op === 'siteInfo') return {locked:!state,accounts:state ? matchingRecords(state.data.records,origin,bindings).filter(r=>r.supported).map(metadata) : [],known:Boolean(bindings[origin])};
   if (message.op === 'openUI') {await chrome.action.openPopup({windowId:tab.windowId});return {};}
   if (message.op === 'siteCode') {
-    if (!state) throw new CompanionError('LOCKED','Prvo otključaj Authenticator.');
+    if (!state) throw new CompanionError('LOCKED','Unlock Authenticator first.');
     const record = matchingRecords(state.data.records,origin,bindings).find(r=>r.id === message.id);
-    if (!record) throw new CompanionError('ORIGIN','Ovaj račun nije povezan s ovom domenom.');
+    if (!record) throw new CompanionError('ORIGIN','This account is not linked to this domain.');
     await requireUnlocked(true);
     return recordCode(record);
   }
-  throw new CompanionError('ORIGIN','Nedopušten zahtjev stranice.');
+  throw new CompanionError('ORIGIN','This page request is not allowed.');
 }
 async function targetTab(tabId,expectedOrigin) {
-  if (!Number.isInteger(tabId)) throw new CompanionError('TAB','Otvori stranicu na kojoj želiš upisati kod.');
+  if (!Number.isInteger(tabId)) throw new CompanionError('TAB','Open the page where you want to fill a code.');
   const tab = await chrome.tabs.get(tabId), origin = siteOrigin(tab.url);
-  if (!origin) throw new CompanionError('TAB','Popunjavanje radi na HTTPS stranicama.');
+  if (!origin) throw new CompanionError('TAB','Code filling works on HTTPS pages.');
   if (expectedOrigin && expectedOrigin !== origin) throw new CompanionError('ORIGIN','Stranica se promijenila. Ponovno otvori ekstenziju.');
   return {tab,origin};
 }
@@ -159,9 +180,9 @@ async function ensureContent(tabId) {
 }
 async function performBinding(request) {
   const state=await requireUnlocked(true),{origin,tab}=await targetTab(request.tabId,request.expectedOrigin);
-  if(!state.data.records.some(record=>record.id===request.id && record.supported))throw new CompanionError('ACCOUNT','Račun nije dostupan za popunjavanje.');
+  if(!state.data.records.some(record=>record.id===request.id && record.supported))throw new CompanionError('ACCOUNT','This account is not available for filling.');
   const url=new URL(origin),pattern=`${url.protocol}//${url.hostname}/*`;
-  if(!await chrome.permissions.contains({origins:[pattern]}))throw new CompanionError('PERMISSION','Prvo dopusti pristup ovoj stranici.');
+  if(!await chrome.permissions.contains({origins:[pattern]}))throw new CompanionError('PERMISSION','Grant access to this site first.');
   const {bindings={},siteFavicons={}}=await chrome.storage.local.get(['bindings','siteFavicons']);
   const automatic=matchingRecords(state.data.records,origin,{}).map(record=>record.id);
   bindings[origin]=[...new Set([...(bindings[origin] || automatic),request.id])];
@@ -182,8 +203,8 @@ async function completePendingBinding(key) {
 async function handleUI(message) {
   if (message.op === 'status') {try {await tryFinishGoogleLogin();} catch {} return status();}
   if (message.op === 'createVault') {
-    if ((await chrome.storage.local.get('vault')).vault) throw new CompanionError('VAULT','Lokalna pohrana već postoji.');
-    if (typeof message.password !== 'string' || message.password.length < 8) throw new CompanionError('PASSWORD','Odaberi lozinku s barem 8 znakova.');
+    if ((await chrome.storage.local.get('vault')).vault) throw new CompanionError('VAULT','A local vault already exists.');
+    if (typeof message.password !== 'string' || message.password.length < 8) throw new CompanionError('PASSWORD','Choose a password with at least 8 characters.');
     const salt = crypto.getRandomValues(new Uint8Array(16)), key = await passwordKey(message.password,salt);
     const data = {session:null,records:[],lastSync:null};
     await chrome.storage.local.set({vault:await encryptVault(data,key,salt)});
@@ -200,18 +221,20 @@ async function handleUI(message) {
   if (message.op === 'lock') {await chrome.storage.session.remove(['unlocked','pendingGoogle','pendingBinding']);await notifyTabs();return status();}
   if (message.op === 'connect') {
     await requireUnlocked(true);
-    const email = String(message.email || '').trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new CompanionError('EMAIL','Upiši adresu Google računa s Authenticator zapisima.');
     const cookie = await chrome.cookies.get({url:'https://accounts.google.com/',name:'oauth_token'});
     const tab = await chrome.tabs.create({url:'https://accounts.google.com/EmbeddedSetup',active:true});
-    await chrome.storage.session.set({pendingGoogle:{tabId:tab.id,started:Date.now(),email,oldHash:await tokenHash(cookie?.value)}});
+    await chrome.storage.session.set({pendingGoogle:{tabId:tab.id,started:Date.now(),oldHash:await tokenHash(cookie?.value)}});
     await chrome.storage.local.remove('lastError'); return {};
   }
-  if (message.op === 'finishConnect') {await tryFinishGoogleLogin(true);return status();}
+  if (message.op === 'finishConnect') {
+    const email = String(message.email || '').trim();
+    if (email && (email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) throw new CompanionError('EMAIL','Enter the email address selected during Google sign-in.');
+    await tryFinishGoogleLogin(true,email);return status();
+  }
   if (message.op === 'sync') {await requireUnlocked(true);await synchronize();await notifyTabs();return status();}
   if (message.op === 'code') {
     const state = await requireUnlocked(true), record = state.data.records.find(r=>r.id===message.id);
-    if (!record) throw new CompanionError('ACCOUNT','Račun nije pronađen.');
+    if (!record) throw new CompanionError('ACCOUNT','Account not found.');
     return recordCode(record);
   }
   if (message.op === 'codes') {
@@ -227,7 +250,7 @@ async function handleUI(message) {
   }
   if (message.op === 'prepareBind') {
     const state=await requireUnlocked(true),{origin}=await targetTab(message.tabId,message.expectedOrigin);
-    if(typeof message.key!=='string' || message.key.length>80 || !state.data.records.some(record=>record.id===message.id && record.supported))throw new CompanionError('ACCOUNT','Račun nije dostupan za povezivanje.');
+    if(typeof message.key!=='string' || message.key.length>80 || !state.data.records.some(record=>record.id===message.id && record.supported))throw new CompanionError('ACCOUNT','This account is not available for linking.');
     await chrome.storage.session.set({pendingBinding:{key:message.key,id:message.id,tabId:message.tabId,expectedOrigin:origin,createdAt:Date.now()}});
     return completePendingBinding(message.key);
   }
@@ -238,10 +261,10 @@ async function handleUI(message) {
     const state = await requireUnlocked(true), {origin,tab} = await targetTab(message.tabId,message.expectedOrigin);
     const {bindings={}} = await chrome.storage.local.get('bindings');
     const record = matchingRecords(state.data.records,origin,bindings).find(r=>r.id===message.id && r.supported);
-    if (!record) throw new CompanionError('ORIGIN','Prvo poveži račun s ovom stranicom.');
+    if (!record) throw new CompanionError('ORIGIN','Link the account to this site first.');
     await ensureContent(tab.id);
     const result = await chrome.tabs.sendMessage(tab.id,{type:'companion:fill',...await recordCode(record)},{frameId:0});
-    if (!result?.filled) throw new CompanionError('FIELD','Nisam pronašao polje za 2FA. Kod možeš kopirati.');
+    if (!result?.filled) throw new CompanionError('FIELD','No verification code field was found. You can copy the code instead.');
     return {};
   }
   if (message.op === 'permissionsChanged') {await registerScripts();await notifyTabs();return status();}
@@ -249,7 +272,7 @@ async function handleUI(message) {
     const {bindings={}} = await chrome.storage.local.get('bindings');
     delete bindings[message.origin]; await chrome.storage.local.set({bindings}); await notifyTabs();return status();
   }
-  throw new CompanionError('MESSAGE','Nepoznata radnja.');
+  throw new CompanionError('MESSAGE','Unknown action.');
 }
 chrome.runtime.onMessage.addListener((message,sender,respond) => {
   if (!message || typeof message !== 'object' || typeof message.op !== 'string') return;

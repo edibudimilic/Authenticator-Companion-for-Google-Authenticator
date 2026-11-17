@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Authenticator Companion for Google Authenticator™",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unofficial open-source companion for Google Authenticator™. Sync accounts and fill 2FA codes. Not affiliated with Google.",
   "minimum_chrome_version": "127",
   "permissions": [

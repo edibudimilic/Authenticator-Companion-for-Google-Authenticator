@@ -8,7 +8,7 @@ const liveCodes=new LiveCodes(()=>ask('codes'));
 let codeRetryAfter=0;
 async function ask(op,values={}) {
   const result=await chrome.runtime.sendMessage({op,...values});
-  if(!result?.ok)throw new Error(result?.error?.message || 'Radnja nije uspjela.');
+  if(!result?.ok)throw new Error(result?.error?.message || 'The action failed.');
   return result.data;
 }
 function showError(error) {$('#alert').textContent=error.message;$('#alert').hidden=false;}
@@ -16,12 +16,12 @@ async function action(callback,button) {
   $('#alert').hidden=true;if(button)button.disabled=true;
   try{await callback();await load();}catch(error){showError(error);}finally{if(button)button.disabled=false;}
 }
-function ago(time) {if(!time)return 'Još nije osvježeno';const seconds=Math.max(0,Math.floor((Date.now()-time)/1000));return seconds<60?'Upravo osvježeno':`Prije ${Math.floor(seconds/60)} min`;}
+function ago(time) {if(!time)return 'Not synced yet';const seconds=Math.max(0,Math.floor((Date.now()-time)/1000));return seconds<60?'Just synced':`${Math.floor(seconds/60)} min ago`;}
 function addButton(parent,label,handler,cls='') {
   const button=document.createElement('button');button.type='button';button.textContent=label;button.className=cls;button.addEventListener('click',()=>action(()=>handler(button),button));parent.append(button);return button;
 }
 async function bindAccount(id) {
-  if(!activeTab?.url)throw new Error('Otvori stranicu za prijavu.');
+  if(!activeTab?.url)throw new Error('Open a sign-in page.');
   const url=new URL(activeTab.url),origin=url.origin;
   const key=crypto.randomUUID();
   // Send intent before opening Chrome's permission prompt. The worker can
@@ -29,7 +29,7 @@ async function bindAccount(id) {
   const prepared=ask('prepareBind',{key,tabId:activeTab.id,id,expectedOrigin:origin});
   const permission=chrome.permissions.request({origins:[`${url.protocol}//${url.hostname}/*`]});
   const [granted]=await Promise.all([permission,prepared]);
-  if(!granted){await ask('cancelBind',{key});throw new Error('Pristup stranici nije dopušten.');}
+  if(!granted){await ask('cancelBind',{key});throw new Error('Access to the site was not granted.');}
   await ask('finishBind',{key});
   matches=(await ask('siteMatches',{tabId:activeTab.id})).accounts;
   renderedSignature='';
@@ -53,12 +53,12 @@ function accountCard(account,isMatch=false) {
   const timer=document.createElement('span');timer.className='code-timer';
   codeRow.append(code,timer);card.append(codeRow);
   const actions=document.createElement('div');actions.className='account-actions';card.append(actions);
-  if(!account.supported){const note=document.createElement('span');note.className='unsupported';note.textContent='Nepodržan tip 2FA zapisa';actions.append(note);return card;}
+  if(!account.supported){const note=document.createElement('span');note.className='unsupported';note.textContent='Unsupported 2FA record type';actions.append(note);return card;}
   codeElements.set(account.id,{code,timer});
-  addButton(actions,'Kopiraj',async button=>{const result=await ask('code',{id:account.id});await navigator.clipboard.writeText(result.code);button.textContent='Kopirano';setTimeout(()=>{button.textContent='Kopiraj';},1500);});
+  addButton(actions,'Copy',async button=>{const result=await ask('code',{id:account.id});await navigator.clipboard.writeText(result.code);button.textContent='Copied';setTimeout(()=>{button.textContent='Copy';},1500);});
   if(page==='popup' && activeTab?.url && /^(https:|http:\/\/(localhost|127\.0\.0\.1))/.test(activeTab.url)) {
-    if(isMatch)addButton(actions,'Popuni',()=>ask('fill',{id:account.id,tabId:activeTab.id,expectedOrigin:new URL(activeTab.url).origin}),'fill');
-    else addButton(actions,'Poveži sa stranicom',()=>bindAccount(account.id));
+    if(isMatch)addButton(actions,'Fill',()=>ask('fill',{id:account.id,tabId:activeTab.id,expectedOrigin:new URL(activeTab.url).origin}),'fill');
+    else addButton(actions,'Link to this site',()=>bindAccount(account.id));
   }
   return card;
 }
@@ -69,11 +69,11 @@ function renderAccounts() {
   const accounts=state.accounts.filter(a=>(a.issuer+' '+a.account).toLowerCase().includes(search));
   const ids=new Set(matches.map(a=>a.id));
   const ordered=page==='popup'?[...accounts.filter(a=>ids.has(a.id)),...accounts.filter(a=>!ids.has(a.id))]:accounts;
-  if(!ordered.length){const empty=document.createElement('div');empty.className='empty';empty.textContent=state.connected?'Nema računa za ovaj upit.':'Poveži Google račun da bi se ovdje pojavili kodovi.';list.append(empty);return;}
+  if(!ordered.length){const empty=document.createElement('div');empty.className='empty';empty.textContent=state.connected?'No accounts match your search.':'Connect a Google account to see your codes here.';list.append(empty);return;}
   let group='';
   for(const account of ordered){
     if(page==='popup'){
-      const next=ids.has(account.id)?'ZA OVU STRANICU':'SVI RAČUNI';
+      const next=ids.has(account.id)?'FOR THIS SITE':'ALL ACCOUNTS';
       if(next!==group){const heading=document.createElement('div');heading.className='group-title';heading.textContent=next;list.append(heading);group=next;}
     }
     list.append(accountCard(account,ids.has(account.id)));
@@ -100,20 +100,23 @@ function render() {
   $('#onboarding').hidden=state.configured;$('#locked').hidden=!state.configured || !state.locked;$('#dashboard').hidden=!state.configured || state.locked;
   if(state.locked || !state.configured){liveCodes.clear();liveCodes.setAccounts([]);codeElements.clear();$('#accounts')?.replaceChildren();return;}
   liveCodes.setAccounts(state.accounts);
-  $('#connection').textContent=state.connected?`${state.count} računa · ${state.email}`:'Lokalna pohrana je otključana';
+  $('#connection').textContent=state.connected?`${state.count} accounts · ${state.email}`:'Local vault is unlocked';
   if($('#count'))$('#count').textContent=String(state.count);
   if($('#last-sync'))$('#last-sync').textContent=ago(state.lastSync);
   if(page==='popup'){
     $('#not-connected').hidden=state.connected;$('#connected-tools').hidden=!state.connected;
   }else{
-    if(state.email && !$('#google-email').value)$('#google-email').value=state.email;
     $('#pending').hidden=!state.pendingGoogle;
-    $('#google-connect').textContent=state.connected?'Ponovi Googleovu prijavu':'Prijavi se Googleom';
+    $('#pending-message').hidden=state.emailRequired;
+    $('#finish-connect').hidden=state.emailRequired;
+    $('#email-fallback-form').hidden=!state.emailRequired;
+    if(!state.emailRequired)$('#google-email').value='';
+    $('#google-connect').textContent=state.connected?'Sign in to Google again':'Sign in with Google';
     $('#sync').disabled=!state.connected;
-    $('#automatic').textContent=state.automatic?'Automatska ponuda je uključena · Isključi':'Omogući automatsku ponudu';
+    $('#automatic').textContent=state.automatic?'Automatic suggestions are on · Turn off':'Enable automatic suggestions';
     const bindings=$('#bindings');bindings.replaceChildren();
     const origins=Object.keys(state.bindings);$('#bindings-section').hidden=!origins.length;
-    for(const origin of origins){const row=document.createElement('div');row.className='binding';const name=document.createElement('span');name.textContent=origin;row.append(name);addButton(row,'Ukloni vezu',()=>ask('removeBinding',{origin}),'text-button');bindings.append(row);}
+    for(const origin of origins){const row=document.createElement('div');row.className='binding';const name=document.createElement('span');name.textContent=origin;row.append(name);addButton(row,'Remove link',()=>ask('removeBinding',{origin}),'text-button');bindings.append(row);}
   }
   renderAccounts();
 }
@@ -131,9 +134,10 @@ async function load(force=false) {
     await refreshVisibleCodes();
   }catch(error){showError(error);}finally{loading=false;}
 }
-$('#create-form')?.addEventListener('submit',event=>{event.preventDefault();action(async()=>{const password=$('#create-password').value;if(password!==$('#confirm-password').value)throw new Error('Lozinke se ne poklapaju.');await ask('createVault',{password});$('#create-password').value=$('#confirm-password').value='';},event.submitter);});
+$('#create-form')?.addEventListener('submit',event=>{event.preventDefault();action(async()=>{const password=$('#create-password').value;if(password!==$('#confirm-password').value)throw new Error('The passwords do not match.');await ask('createVault',{password});$('#create-password').value=$('#confirm-password').value='';},event.submitter);});
 $('#unlock-form')?.addEventListener('submit',event=>{event.preventDefault();action(async()=>{await ask('unlock',{password:$('#unlock-password').value});$('#unlock-password').value='';},event.submitter);});
-$('#connect-form')?.addEventListener('submit',event=>{event.preventDefault();action(()=>ask('connect',{email:$('#google-email').value}),event.submitter);});
+$('#connect-form')?.addEventListener('submit',event=>{event.preventDefault();action(()=>ask('connect'),event.submitter);});
+$('#email-fallback-form')?.addEventListener('submit',event=>{event.preventDefault();action(()=>ask('finishConnect',{email:$('#google-email').value}),event.submitter);});
 $('#finish-connect')?.addEventListener('click',event=>action(()=>ask('finishConnect'),event.currentTarget));
 $('#lock')?.addEventListener('click',()=>action(()=>ask('lock')));
 $('#sync')?.addEventListener('click',event=>action(()=>ask('sync'),event.currentTarget));
@@ -141,7 +145,7 @@ $('#search')?.addEventListener('input',renderAccounts);
 for(const id of ['setup','settings','connect-settings'])$('#'+id)?.addEventListener('click',()=>chrome.runtime.openOptionsPage());
 $('#automatic')?.addEventListener('click',event=>action(async()=>{
   if(state.automatic)await chrome.permissions.remove({origins:['https://*/*']});
-  else if(!await chrome.permissions.request({origins:['https://*/*']}))throw new Error('Automatska ponuda nije uključena.');
+  else if(!await chrome.permissions.request({origins:['https://*/*']}))throw new Error('Automatic suggestions were not enabled.');
   await ask('permissionsChanged');
 },event.currentTarget));
 if(page==='popup'){try{[activeTab]=await chrome.tabs.query({active:true,currentWindow:true});}catch{}}

@@ -16,8 +16,8 @@ You do not need to trust a prebuilt download. Inspect this repository and load t
 2. Extract the files.
 3. Open chrome://extensions in Chrome and enable **Developer mode**.
 4. Click **Load unpacked** and select the repository's **extension** directory.
-5. Open the extension settings, create a local vault password (at least eight characters), and connect the same Google account used in Google Authenticator. Complete sign-in on Google's page.
-6. Enable automatic suggestions or grant access to individual sites. For an unrecognized site, open the extension and select **Poveži sa stranicom** next to the account.
+5. Open the extension settings, create a local vault password (at least eight characters), and connect the same Google account used in Google Authenticator. Complete sign-in on Google's page. No email is requested upfront; enter it only if the fallback appears after sign-in.
+6. Enable automatic suggestions or grant access to individual sites. For an unrecognized site, open the extension and select **Link to this site** next to the account.
 
 No server, npm installation, build step, or paid subscription is needed to use the extension. The current interface is in Croatian. [Croatian instructions](README.hr.md).
 

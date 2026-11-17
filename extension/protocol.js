@@ -25,24 +25,24 @@ export function decodeFields(bytes) {
   const readVarint = () => {
     let value = 0n;
     for (let shift = 0n; shift < 70n; shift += 7n) {
-      if (offset >= bytes.length) throw new CompanionError('PROTOBUF', 'Google je vratio nepotpun zapis.');
+      if (offset >= bytes.length) throw new CompanionError('PROTOBUF', 'Google returned an incomplete record.');
       const byte = bytes[offset++]; value |= BigInt(byte & 127) << shift;
       if (!(byte & 128)) return value;
     }
-    throw new CompanionError('PROTOBUF', 'Nepodržan format Googleova odgovora.');
+    throw new CompanionError('PROTOBUF', 'Unsupported Google response format.');
   };
   while (offset < bytes.length) {
     const tag = Number(readVarint()), number = tag >>> 3, wire = tag & 7;
-    if (!number) throw new CompanionError('PROTOBUF', 'Neispravan Googleov odgovor.');
+    if (!number) throw new CompanionError('PROTOBUF', 'Invalid Google response.');
     let value;
     if (wire === 0) value = readVarint();
     else {
       const length = wire === 2 ? Number(readVarint()) : wire === 1 ? 8 : wire === 5 ? 4 : -1;
-      if (!Number.isSafeInteger(length) || length < 0 || length > bytes.length - offset) throw new CompanionError('PROTOBUF', 'Nepodržan format Googleova odgovora.');
+      if (!Number.isSafeInteger(length) || length < 0 || length > bytes.length - offset) throw new CompanionError('PROTOBUF', 'Unsupported Google response format.');
       value = bytes.slice(offset, offset + length); offset += length;
     }
     fields.push({number, wire, value});
-    if (fields.length > 100000) throw new CompanionError('PROTOBUF', 'Googleov odgovor je prevelik.');
+    if (fields.length > 100000) throw new CompanionError('PROTOBUF', 'The Google response is too large.');
   }
   return fields;
 }
@@ -53,21 +53,21 @@ export function grpcFrame(message) {
   return concat(prefix, message);
 }
 export function decodeGrpcFrames(bytes) {
-  if (bytes.length < 5) throw new CompanionError('GRPC', 'Google je odbio dohvat zapisa. Pokušaj ponovno ili ponovi Googleovu prijavu.');
+  if (bytes.length < 5) throw new CompanionError('GRPC', 'Google rejected the account request. Try again or sign in to Google again.');
   const messages = []; let offset = 0;
   while (offset < bytes.length) {
-    if (offset + 5 > bytes.length) throw new CompanionError('GRPC', 'Nepotpun odgovor pri sinkronizaciji.');
+    if (offset + 5 > bytes.length) throw new CompanionError('GRPC', 'Incomplete sync response.');
     const flag = bytes[offset], length = new DataView(bytes.buffer, bytes.byteOffset + offset + 1, 4).getUint32(0);
     offset += 5;
-    if (length > bytes.length - offset) throw new CompanionError('GRPC', 'Nepotpun odgovor pri sinkronizaciji.');
+    if (length > bytes.length - offset) throw new CompanionError('GRPC', 'Incomplete sync response.');
     const body = bytes.slice(offset, offset + length); offset += length;
     if (flag === 128) {
       const status = text.decode(body).match(/grpc-status:\s*(\d+)/i)?.[1];
-      if (status && status !== '0') throw new CompanionError('GRPC', `Google je odbio sinkronizaciju (status ${status}).`);
+      if (status && status !== '0') throw new CompanionError('GRPC', `Google rejected sync (status ${status}).`);
     } else if (flag === 0) messages.push(body);
-    else throw new CompanionError('GRPC', 'Google je promijenio format sinkronizacije.');
+    else throw new CompanionError('GRPC', 'Google changed the sync format.');
   }
-  if (!messages.length) throw new CompanionError('GRPC', 'Google nije vratio odgovor sa zapisima.');
+  if (!messages.length) throw new CompanionError('GRPC', 'Google did not return an account response.');
   return messages;
 }
 export function decodeListResponse(bytes) {
@@ -79,9 +79,9 @@ export function decodeListResponse(bytes) {
       const credential = decodeFields(item.value);
       const payload = bytesField(credential, 2);
       const otpData = payload && bytesField(decodeFields(payload), 1);
-      if (!otpData) throw new CompanionError('CREDENTIAL', 'Google je promijenio format Authenticator zapisa.');
+      if (!otpData) throw new CompanionError('CREDENTIAL', 'Google changed the Authenticator record format.');
       const otp = decodeFields(otpData), secret = bytesField(otp, 1), resource = bytesField(credential, 1);
-      if (!secret?.length || !resource?.length) throw new CompanionError('CREDENTIAL', 'Zapis nema ključ za generiranje kodova.');
+      if (!secret?.length || !resource?.length) throw new CompanionError('CREDENTIAL', 'This record has no key for generating codes.');
       const record = {
         id:text.decode(resource), secret:toBase64(secret),
         issuer:bytesField(otp, 3) ? text.decode(bytesField(otp, 3)) : '',
@@ -106,12 +106,12 @@ export async function totp(secret, seconds = Date.now() / 1000, digits = 6, algo
 export async function recordCode(record) {
   // The live Passbox schema uses enum 2 for six digits. Other digit enums
   // have not been verified and must not silently generate incorrect codes.
-  if (!record.supported) throw new CompanionError('UNSUPPORTED', 'Ovaj tip 2FA zapisa još nije podržan.');
+  if (!record.supported) throw new CompanionError('UNSUPPORTED', 'This type of 2FA record is not supported yet.');
   const algorithm = {1:'SHA-1',2:'SHA-256',3:'SHA-512'}[record.algorithm];
   for (let attempt=0; attempt<3; attempt++) {
     const now = Date.now(), counter = Math.floor(now/30000);
     const code = await totp(fromBase64(record.secret), now/1000, 6, algorithm);
     if (Math.floor(Date.now()/30000) === counter) return {code,expiresAt:(counter+1)*30000};
   }
-  throw new CompanionError('CLOCK','Provjeri vrijeme na računalu i pokušaj ponovno.');
+  throw new CompanionError('CLOCK','Check your computer clock and try again.');
 }

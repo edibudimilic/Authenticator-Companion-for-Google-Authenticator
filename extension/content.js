@@ -5,7 +5,7 @@
   let dismissed=new WeakSet();
   const ask = async (op, values={}) => {
     const result = await runtime.sendMessage({op,...values});
-    if (!result?.ok) throw new Error(result?.error?.message || 'Otvori Authenticator u Chromeu.');
+    if (!result?.ok) throw new Error(result?.error?.message || 'Open Authenticator in Chrome.');
     return result.data;
   };
   function visible(input) {const r=input.getBoundingClientRect();return r.width>2 && r.height>2 && !input.disabled && !input.readOnly && getComputedStyle(input).visibility!=='hidden';}
@@ -53,18 +53,18 @@
     style.textContent='*{box-sizing:border-box}.panel{font:13px/1.4 system-ui,sans-serif;background:#fff;color:#18362a;border:1px solid #ccddd4;border-radius:12px;box-shadow:0 8px 32px #102e2426;padding:9px;max-height:240px;overflow:auto}header{display:flex;align-items:center;justify-content:space-between;padding:4px 7px 8px;font-size:11px;color:#667970;font-weight:600}button{font:inherit;cursor:pointer;border:0}header button{background:transparent;color:#6b7b73;font-size:18px;padding:0 3px}.account{display:block;text-align:left;width:100%;background:#f0f6f2;border-radius:7px;margin-top:5px;padding:9px;color:#173e2a}.account:hover{background:#e1efe6}.account strong,.account span{display:block}.account span{font-size:11px;color:#5d7466;overflow:hidden;text-overflow:ellipsis}.error{color:#9a3424;padding:8px;font-size:12px}';
     shadow.append(style);panel=document.createElement('div');panel.className='panel';shadow.append(panel);
     const header=document.createElement('header');header.append(document.createTextNode('Authenticator Companion'));
-    const close=document.createElement('button');close.textContent='×';close.ariaLabel='Zatvori ponudu';close.addEventListener('click',()=>dismiss(true));header.append(close);panel.append(header);
+    const close=document.createElement('button');close.textContent='×';close.ariaLabel='Close suggestions';close.addEventListener('click',()=>dismiss(true));header.append(close);panel.append(header);
     if (lastInfo.locked) {
-      const unlock=document.createElement('button');unlock.className='account';unlock.textContent='Otključaj Authenticator';
+      const unlock=document.createElement('button');unlock.className='account';unlock.textContent='Unlock Authenticator';
       unlock.addEventListener('click',event=>{if(event.isTrusted)ask('openUI').catch(()=>{});});panel.append(unlock);
     } else for (const account of lastInfo.accounts) {
       const button=document.createElement('button');button.className='account';
-      const strong=document.createElement('strong');strong.textContent=account.issuer || '2FA račun';
+      const strong=document.createElement('strong');strong.textContent=account.issuer || '2FA account';
       const label=document.createElement('span');label.textContent=account.account;button.append(strong,label);
       button.addEventListener('click',async event=>{
         if(!event.isTrusted)return;
         button.disabled=true;
-        try {const data=await ask('siteCode',{id:account.id});if(Date.now()>=data.expiresAt || !fill(data.code))throw new Error('Odaberi polje za 2FA i pokušaj ponovno.');}
+        try {const data=await ask('siteCode',{id:account.id});if(Date.now()>=data.expiresAt || !fill(data.code))throw new Error('Select the verification code field and try again.');}
         catch(error){const note=document.createElement('div');note.className='error';note.textContent=error.message;panel?.append(note);button.disabled=false;}
       });panel.append(button);
     }
