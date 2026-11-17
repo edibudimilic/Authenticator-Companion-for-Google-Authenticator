@@ -7,3 +7,5 @@
 - 27 automated tests pass, covering automatic identity exchange, fallback, stale cookies and network failures. Real Google sign-in for the new no-email attempt has not yet been verified; the existing explicit-email exchange is retained as fallback.
 
 Independent and unofficial; not affiliated with or endorsed by Google LLC. Google Authenticator is a trademark of Google LLC. The internal Google integration is unsupported and has not received an independent security audit.
+
+Submitted for Chrome Web Store review on 17 November 2026, with automatic publication after approval. Version 1.0.0 remains public while this update is reviewed.
